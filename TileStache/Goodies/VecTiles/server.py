@@ -298,9 +298,9 @@ class Response:
         tol_val = tolerances[tol_idx]
         self.padding = self.padding * tol_val
 
-        geo_query = build_query(srid, subquery, columns, bounds, tolerance, True, clip, self.padding)
+        geo_query = build_query(3857, subquery, columns, bounds, tolerance, True, clip, self.padding)
         merc_query = build_query(srid, subquery, columns, bounds, tolerance, False, clip, self.padding)
-        pbf_query = build_query(srid, subquery, columns, bounds, tolerance, False, clip, self.padding, pbf.extents)
+        pbf_query = build_query(3857, subquery, columns, bounds, tolerance, False, clip, self.padding, pbf.extents)
         self.query = dict(TopoJSON=geo_query, JSON=geo_query, MVT=merc_query, PBF=pbf_query)
 
     def save(self, out, format):
