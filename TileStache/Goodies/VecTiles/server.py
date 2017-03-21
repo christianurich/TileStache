@@ -182,7 +182,7 @@ class Provider:
             query = self.queries[coord.zoom]
         except IndexError:
             query = self.queries[-1]
-        query = query.replace("%layer_name%", query_url)
+        query = query.replace("%layer_name%", str('"') + query_url + str('"') )
         ll = self.layer.projection.coordinateProj(coord.down())
         ur = self.layer.projection.coordinateProj(coord.right())
         bounds = ll.x, ll.y, ur.x, ur.y
