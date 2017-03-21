@@ -35,6 +35,8 @@ from . import mvt, geojson, topojson, pbf
 from ...Geography import SphericalMercator
 from ModestMaps.Core import Point
 
+import json
+
 tolerances = [6378137 * 2 * pi / (2 ** (zoom + 8)) for zoom in range(20)]
 
 class Provider:
@@ -173,14 +175,14 @@ class Provider:
         
             self.queries[z] = query
         
-    def renderTile(self, width, height, srs, coord):
+    def renderTile(self, width, height, srs, coord, query_url):
         ''' Render a single tile, return a Response instance.
         '''
         try:
             query = self.queries[coord.zoom]
         except IndexError:
             query = self.queries[-1]
-
+        query = query.replace("%layer_name%", query_url)
         ll = self.layer.projection.coordinateProj(coord.down())
         ur = self.layer.projection.coordinateProj(coord.right())
         bounds = ll.x, ll.y, ur.x, ur.y
@@ -196,7 +198,7 @@ class Provider:
 
         tolerance = self.simplify * tolerances[coord.zoom] if coord.zoom < self.simplify_until else None
         
-        return Response(self.dbinfo, self.srid, query, self.columns[query], bounds, tolerance, coord.zoom, self.clip, coord, self.layer.name(), self.padding)
+        return Response(self.dbinfo, self.srid, query, self.columns[query], bounds, tolerance, coord.zoom, self.clip, coord, self.layer.name(), self.padding, query_url)
 
     def getTypeByExtension(self, extension):
         ''' Get mime-type and format by file extension, one of "mvt", "json", "topojson" or "pbf".
@@ -279,7 +281,7 @@ class Connection:
 class Response:
     '''
     '''
-    def __init__(self, dbinfo, srid, subquery, columns, bounds, tolerance, zoom, clip, coord, layer_name='', padding=0):
+    def __init__(self, dbinfo, srid, subquery, columns, bounds, tolerance, zoom, clip, coord, layer_name='', padding=0, query_url=''):
         ''' Create a new response object with Postgres connection info and a query.
         
             bounds argument is a 4-tuple with (xmin, ymin, xmax, ymax).
@@ -300,7 +302,7 @@ class Response:
 
         geo_query = build_query(3857, subquery, columns, bounds, tolerance, True, clip, self.padding)
         merc_query = build_query(srid, subquery, columns, bounds, tolerance, False, clip, self.padding)
-        pbf_query = build_query(3857, subquery, columns, bounds, tolerance, False, clip, self.padding, pbf.extents)
+        pbf_query = build_query(3857, subquery, columns, bounds, tolerance, False, clip, self.padding, pbf.extents, query_url)
         self.query = dict(TopoJSON=geo_query, JSON=geo_query, MVT=merc_query, PBF=pbf_query)
 
     def save(self, out, format):
@@ -455,8 +457,9 @@ def get_features(dbinfo, query, n_try=1):
 
     return features
 
-        
-def build_query(srid, subquery, subcolumns, bounds, tolerance, is_geo, is_clipped, padding=0, scale=None):
+
+
+def build_query(srid, subquery, subcolumns, bounds, tolerance, is_geo, is_clipped, padding=0, scale=None, query_url=''):
     ''' Build and return an PostGIS query.
     '''
     bbox = 'ST_MakeBox2D(ST_MakePoint(%.12f, %.12f), ST_MakePoint(%.12f, %.12f))' % (

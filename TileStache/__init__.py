@@ -283,7 +283,7 @@ def requestHandler2(config_hint, path_info, query_string=None, script_name=''):
             return 302, headers, 'You are being redirected to %s\n' % redirect_uri
 
         else:
-            status_code, headers, content = layer.getTileResponse(coord, extension)
+            status_code, headers, content = layer.getTileResponse(coord, extension, query=query_string)
 
         if layer.allowed_origin:
             headers.setdefault('Access-Control-Allow-Origin', layer.allowed_origin)
