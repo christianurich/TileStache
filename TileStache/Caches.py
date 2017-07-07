@@ -192,10 +192,10 @@ class Disk:
     def _is_compressed(self, format):
         return format.lower() in self.gzip
     
-    def _filepath(self, layer, coord, format):
+    def _filepath(self, layer, coord, format, query):
         """
         """
-        l = layer.name()
+        l = layer.name() + query
         z = '%d' % coord.zoom
         e = format.lower()
         e += self._is_compressed(format) and '.gz' or ''
@@ -236,26 +236,26 @@ class Disk:
 
         return filepath
 
-    def _fullpath(self, layer, coord, format):
+    def _fullpath(self, layer, coord, format, query = ''):
         """
         """
-        filepath = self._filepath(layer, coord, format)
+        filepath = self._filepath(layer, coord, format, query)
         fullpath = pathjoin(self.cachepath, filepath)
 
         return fullpath
 
-    def _lockpath(self, layer, coord, format):
+    def _lockpath(self, layer, coord, format, query):
         """
         """
-        return self._fullpath(layer, coord, format) + '.lock'
+        return self._fullpath(layer, coord, format, query) + '.lock'
     
-    def lock(self, layer, coord, format):
+    def lock(self, layer, coord, format, query):
         """ Acquire a cache lock for this tile.
         
             Returns nothing, but blocks until the lock has been acquired.
             Lock is implemented as an empty directory next to the tile file.
         """
-        lockpath = self._lockpath(layer, coord, format)
+        lockpath = self._lockpath(layer, coord, format, query)
         due = time.time() + layer.stale_lock_timeout
         
         while True:
@@ -280,12 +280,12 @@ class Disk:
             finally:
                 os.umask(umask_old)
     
-    def unlock(self, layer, coord, format):
+    def unlock(self, layer, coord, format, query):
         """ Release a cache lock for this tile.
 
             Lock is implemented as an empty directory next to the tile file.
         """
-        lockpath = self._lockpath(layer, coord, format)
+        lockpath = self._lockpath(layer, coord, format, query)
 
         try:
             os.rmdir(lockpath)
@@ -305,10 +305,10 @@ class Disk:
             if e.errno != 2:
                 raise
         
-    def read(self, layer, coord, format):
+    def read(self, layer, coord, format, query):
         """ Read a cached tile.
         """
-        fullpath = self._fullpath(layer, coord, format)
+        fullpath = self._fullpath(layer, coord, format, query)
         
         if not exists(fullpath):
             return None
@@ -325,10 +325,10 @@ class Disk:
             body = open(fullpath, 'rb').read()
             return body
     
-    def save(self, body, layer, coord, format):
+    def save(self, body, layer, coord, format, query):
         """ Save a cached tile.
         """
-        fullpath = self._fullpath(layer, coord, format)
+        fullpath = self._fullpath(layer, coord, format, query)
         
         try:
             umask_old = os.umask(self.umask)
