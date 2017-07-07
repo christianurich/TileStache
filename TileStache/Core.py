@@ -387,10 +387,12 @@ class Layer:
 
         cache = self.config.cache
 
+        layer_name = self + query
+
         if not ignore_cached:
             # Start by checking for a tile in the cache.
             try:
-                body = cache.read(self, coord, format)
+                body = cache.read(layer_name, coord, format)
             except TheTileLeftANote as e:
                 headers = e.headers
                 status_code = e.status_code
@@ -403,7 +405,7 @@ class Layer:
 
         else:
             # Then look in the bag of recent tiles.
-            body = _getRecentTile(self, coord, format)
+            body = _getRecentTile(layer_name, coord, format)
             tile_from = 'recent tiles'
 
         # If no tile was found, dig deeper
@@ -416,12 +418,12 @@ class Layer:
                     lockCoord = self.metatile.firstCoord(coord)
 
                     # We may need to write a new tile, so acquire a lock.
-                    cache.lock(self, lockCoord, format)
+                    cache.lock(layer_name, lockCoord, format)
 
                 if not ignore_cached:
                     # There's a chance that some other process has
                     # written the tile while the lock was being acquired.
-                    body = cache.read(self, coord, format)
+                    body = cache.read(layer_name, coord, format)
                     tile_from = 'cache after all'
 
                 if body is None:
@@ -450,7 +452,7 @@ class Layer:
                     body = buff.getvalue()
 
                     if save:
-                        cache.save(body, self, coord, format)
+                        cache.save(body, layer_name, coord, format)
 
                     tile_from = 'layer.render()'
 
@@ -465,9 +467,9 @@ class Layer:
             finally:
                 if lockCoord:
                     # Always clean up a lock when it's no longer being used.
-                    cache.unlock(self, lockCoord, format)
+                    cache.unlock(layer_name, lockCoord, format)
 
-        _addRecentTile(self, coord, format, body)
+        _addRecentTile(layer_name, coord, format, body)
         logging.info('TileStache.Core.Layer.getTileResponse() %s/%d/%d/%d.%s via %s in %.3f', self.name(), coord.zoom, coord.column, coord.row, extension, tile_from, time() - start_time)
 
         return status_code, headers, body
